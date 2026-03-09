@@ -23,7 +23,8 @@ class SigningService {
         progress("Fetching anisette data...")
         AppleAuthService.shared.authenticate(
             appleID: appleID, password: password, bundleID: bundleID,
-            twoFactorHandler: twoFactorHandler
+            twoFactorHandler: twoFactorHandler,
+            progress: progress
         ) { [weak self] result in
             guard let self else { return }
             switch result {
