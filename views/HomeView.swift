@@ -84,7 +84,12 @@ struct HomeView: View {
             }
             .navigationBarHidden(true)
             .fileImporter(isPresented: $showingFilePicker,
-                          allowedContentTypes: [UTType(filenameExtension: "ipa") ?? .data],
+                          allowedContentTypes: [
+                              UTType(filenameExtension: "ipa") ?? .data,
+                              UTType(mimeType: "application/octet-stream") ?? .data,
+                              .zip,
+                              .data
+                          ],
                           allowsMultipleSelection: false) { result in
                 switch result {
                 case .success(let urls):
