@@ -44,15 +44,8 @@ class SigningService {
                 var cArgs = args.map { strdup($0) }
                 cArgs.append(nil)
 
-                let stderrPipe = Pipe()
-                var fileActions: posix_spawn_file_actions_t?
-                posix_spawn_file_actions_init(&fileActions)
-                posix_spawn_file_actions_adddup2(&fileActions, stderrPipe.fileHandleForWriting.fileDescriptor, STDERR_FILENO)
-
-                let spawnResult = posix_spawn(&pid, args[0], &fileActions, nil, &cArgs, nil)
-                posix_spawn_file_actions_destroy(&fileActions)
+                let spawnResult = posix_spawn(&pid, args[0], nil, nil, &cArgs, nil)
                 cArgs.dropLast().forEach { free($0) }
-                stderrPipe.fileHandleForWriting.closeFile()
 
                 guard spawnResult == 0 else {
                     throw SigningError.zsignFailed("Failed to launch zsign")
@@ -61,9 +54,8 @@ class SigningService {
                 var status: Int32 = 0
                 waitpid(pid, &status, 0)
 
-                guard WIFEXITED(status) && WEXITSTATUS(status) == 0 else {
-                    let msg = String(data: stderrPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-                    throw SigningError.zsignFailed(msg)
+                guard status == 0 else {
+                    throw SigningError.zsignFailed("zsign exited with status \(status)")
                 }
 
                 guard FileManager.default.fileExists(atPath: outputURL.path) else {
