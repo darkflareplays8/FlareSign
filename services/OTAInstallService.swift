@@ -88,15 +88,15 @@ class LocalHTTPServer {
             response = (try? Data(contentsOf: ipaURL)) ?? Data()
             let header = "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: \(response.count)\r\n\r\n"
             let headerData = header.data(using: .utf8)!
-            headerData.withUnsafeBytes { write(client, $0.baseAddress, headerData.count) }
-            response.withUnsafeBytes { write(client, $0.baseAddress, response.count) }
+            _ = headerData.withUnsafeBytes { write(client, $0.baseAddress, headerData.count) }
+            _ = response.withUnsafeBytes { write(client, $0.baseAddress, response.count) }
             close(client)
             return
         } else {
             response = httpResponse(body: Data(), contentType: "text/plain")
         }
 
-        response.withUnsafeBytes { write(client, $0.baseAddress, response.count) }
+        _ = response.withUnsafeBytes { write(client, $0.baseAddress, response.count) }
         close(client)
     }
 
