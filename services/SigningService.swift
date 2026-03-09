@@ -34,24 +34,35 @@ class SigningService {
                 }
 
                 var args = [zsignPath, "-z", "9", "-o", outputURL.path, "-b", bundleID, "-n", appName]
-
                 if let profile = profileURL { args += ["-m", profile.path] }
                 if let id = appleID, let pw = password, !id.isEmpty, !pw.isEmpty {
                     args += ["-a", id, "-p", pw]
                 }
-
                 args.append(ipaURL.path)
 
-                let process = Process()
-                process.executableURL = URL(fileURLWithPath: args[0])
-                process.arguments = Array(args.dropFirst())
-                let stderr = Pipe()
-                process.standardError = stderr
-                try process.run()
-                process.waitUntilExit()
+                var pid: pid_t = 0
+                var cArgs = args.map { strdup($0) }
+                cArgs.append(nil)
 
-                guard process.terminationStatus == 0 else {
-                    let msg = String(data: stderr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                let stderrPipe = Pipe()
+                var fileActions: posix_spawn_file_actions_t?
+                posix_spawn_file_actions_init(&fileActions)
+                posix_spawn_file_actions_adddup2(&fileActions, stderrPipe.fileHandleForWriting.fileDescriptor, STDERR_FILENO)
+
+                let spawnResult = posix_spawn(&pid, args[0], &fileActions, nil, &cArgs, nil)
+                posix_spawn_file_actions_destroy(&fileActions)
+                cArgs.dropLast().forEach { free($0) }
+                stderrPipe.fileHandleForWriting.closeFile()
+
+                guard spawnResult == 0 else {
+                    throw SigningError.zsignFailed("Failed to launch zsign")
+                }
+
+                var status: Int32 = 0
+                waitpid(pid, &status, 0)
+
+                guard WIFEXITED(status) && WEXITSTATUS(status) == 0 else {
+                    let msg = String(data: stderrPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
                     throw SigningError.zsignFailed(msg)
                 }
 
