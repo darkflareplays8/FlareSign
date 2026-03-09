@@ -46,5 +46,10 @@
     </array>
     <key>NSUserNotificationsUsageDescription</key>
     <string>FlareSign reminds you to renew your signed apps before they expire.</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
 </dict>
 </plist>
