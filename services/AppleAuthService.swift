@@ -45,20 +45,28 @@ class AppleAuthService {
         password: String,
         bundleID: String,
         twoFactorHandler: @escaping (String, @escaping (String) -> Void) -> Void,
+        progress: @escaping (String) -> Void = { _ in },
         completion: @escaping (Result<AppleAuthResult, Error>) -> Void
     ) {
-        fetchAnisetteData { [weak self] result in
+        fetchAnisetteData(progress: progress) { [weak self] result in
             guard let self else { return }
             switch result {
-            case .failure(let e): completion(.failure(e))
+            case .failure(let e):
+                progress("Anisette failed: \(e.localizedDescription)")
+                completion(.failure(e))
             case .success(let anisette):
+                progress("Anisette OK — authenticating with Apple...")
                 self.gsaAuthenticate(appleID: appleID, password: password, anisette: anisette,
                                      twoFactorHandler: twoFactorHandler) { authResult in
                     switch authResult {
-                    case .failure(let e): completion(.failure(e))
+                    case .failure(let e):
+                        progress("Auth failed: \(e.localizedDescription)")
+                        completion(.failure(e))
                     case .success(let (adsid, token)):
+                        progress("Auth OK — fetching certificate...")
                         self.fetchCertificateAndProvision(adsid: adsid, token: token,
                                                           bundleID: bundleID, anisette: anisette,
+                                                          progress: progress,
                                                           completion: completion)
                     }
                 }
@@ -66,52 +74,60 @@ class AppleAuthService {
         }
     }
 
-    func fetchAnisetteData(completion: @escaping (Result<AnisetteData, Error>) -> Void) {
+    func fetchAnisetteData(progress: @escaping (String) -> Void = { _ in },
+                            completion: @escaping (Result<AnisetteData, Error>) -> Void) {
         // All known public v3 anisette servers — tried in order, first working one wins.
         // NOTE: Sideloadly's server is intentionally excluded — it's a v1 server
         // that is known to lock Apple IDs when shared by many users.
         let servers = [
-            // SideStore official servers (most reliable, multiple domains)
             "https://ani.sidestore.io/v3",
             "https://ani.sidestore.app/v3",
             "https://ani.sidestore.zip/v3",
-            // Community servers from SideStore's official anisette-servers repo
             "https://ani.846969.xyz/v3",
             "https://ani.npeg.us/v3",
             "https://anisette.wedotstud.io/v3",
             "https://ani.xu30.top/v3",
             "https://ani.owoellen.rocks/v3",
             "https://ani.wesbryie.com/v3",
-            // Raw IP server (Macley — from official list)
             "http://5.249.163.88:6969/v3",
-            // AltStore server (v3 endpoint)
             "https://ani.altstore.io/v3",
         ]
-        tryAnisetteServers(servers, index: 0, completion: completion)
+        tryAnisetteServers(servers, index: 0, progress: progress, completion: completion)
     }
 
     private func tryAnisetteServers(_ servers: [String], index: Int,
+                                     progress: @escaping (String) -> Void,
                                      completion: @escaping (Result<AnisetteData, Error>) -> Void) {
         guard index < servers.count else {
+            progress("All \(servers.count) anisette servers failed — check network/ATS")
             completion(.failure(AppleAuthError.anisetteUnavailable)); return
         }
-        guard let url = URL(string: servers[index]) else {
-            tryAnisetteServers(servers, index: index + 1, completion: completion); return
+        let serverURL = servers[index]
+        guard let url = URL(string: serverURL) else {
+            tryAnisetteServers(servers, index: index + 1, progress: progress, completion: completion); return
         }
+        progress("[\(index+1)/\(servers.count)] Trying \(serverURL)...")
         var request = URLRequest(url: url)
         request.timeoutInterval = 8
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self else { return }
-            // Try next server on any failure
-            if error != nil || (response as? HTTPURLResponse)?.statusCode != 200 {
-                self.tryAnisetteServers(servers, index: index + 1, completion: completion); return
+            let status = (response as? HTTPURLResponse)?.statusCode
+            if let error = error {
+                progress("  ✗ \(serverURL.components(separatedBy: "/")[2]): \(error.localizedDescription)")
+                self.tryAnisetteServers(servers, index: index + 1, progress: progress, completion: completion); return
+            }
+            if status != 200 {
+                progress("  ✗ HTTP \(status ?? 0)")
+                self.tryAnisetteServers(servers, index: index + 1, progress: progress, completion: completion); return
             }
             guard let data,
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let machineID = json["X-Apple-I-MD-M"] as? String, !machineID.isEmpty,
                   let otp = json["X-Apple-I-MD"] as? String, !otp.isEmpty else {
-                self.tryAnisetteServers(servers, index: index + 1, completion: completion); return
+                progress("  ✗ Bad/empty response from server")
+                self.tryAnisetteServers(servers, index: index + 1, progress: progress, completion: completion); return
             }
+            progress("  ✓ Got anisette from \(serverURL.components(separatedBy: "/")[2])")
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions = [.withInternetDateTime]
             let anisette = AnisetteData(
@@ -267,6 +283,7 @@ class AppleAuthService {
 
     private func fetchCertificateAndProvision(
         adsid: String, token: String, bundleID: String, anisette: AnisetteData,
+        progress: @escaping (String) -> Void = { _ in },
         completion: @escaping (Result<AppleAuthResult, Error>) -> Void
     ) {
         let keyAttrs: [String: Any] = [kSecAttrKeyType as String: kSecAttrKeyTypeRSA,
@@ -280,28 +297,41 @@ class AppleAuthService {
             completion(.failure(AppleAuthError.certFailed("Key export failed"))); return
         }
 
+        progress("Fetching team ID...")
         let serviceURL = "https://developerservices2.apple.com/services/QH65B2/ios"
         fetchTeamID(adsid: adsid, token: token, anisette: anisette, serviceURL: serviceURL) { [weak self] tr in
             guard let self else { return }
             switch tr {
-            case .failure(let e): completion(.failure(e))
+            case .failure(let e):
+                progress("Team ID failed: \(e.localizedDescription)")
+                completion(.failure(e))
             case .success(let teamID):
+                progress("Team ID: \(teamID) — submitting CSR...")
                 self.submitCSR(pubKeyData: pubKeyData, adsid: adsid, token: token, teamID: teamID,
                                anisette: anisette, serviceURL: serviceURL) { cr in
                     switch cr {
-                    case .failure(let e): completion(.failure(e))
+                    case .failure(let e):
+                        progress("CSR failed: \(e.localizedDescription)")
+                        completion(.failure(e))
                     case .success(let certData):
+                        progress("Certificate OK (\(certData.count) bytes) — creating App ID...")
                         self.createAppID(bundleID: bundleID, adsid: adsid, token: token,
                                          teamID: teamID, anisette: anisette, serviceURL: serviceURL) { ar in
                             switch ar {
-                            case .failure(let e): completion(.failure(e))
+                            case .failure(let e):
+                                progress("App ID failed: \(e.localizedDescription)")
+                                completion(.failure(e))
                             case .success(let appIDId):
+                                progress("App ID: \(appIDId) — downloading profile...")
                                 self.fetchProvisioningProfile(appIDId: appIDId, adsid: adsid, token: token,
                                                               teamID: teamID, anisette: anisette,
                                                               serviceURL: serviceURL) { pr in
                                     switch pr {
-                                    case .failure(let e): completion(.failure(e))
+                                    case .failure(let e):
+                                        progress("Profile failed: \(e.localizedDescription)")
+                                        completion(.failure(e))
                                     case .success(let provData):
+                                        progress("Profile OK (\(provData.count) bytes) — ready to sign")
                                         completion(.success(AppleAuthResult(
                                             adsid: adsid, token: token, certificate: certData,
                                             privateKey: privateKey, provisioningProfile: provData, teamID: teamID
