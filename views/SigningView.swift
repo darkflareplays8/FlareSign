@@ -24,13 +24,37 @@ struct SigningView: View {
     @State private var showingP12Picker = false
     @State private var showingProvisionPicker = false
     @State private var signingState: SigningState = .idle
-    @State private var progressMessage = ""
+    @State private var logLines: [LogLine] = []
     @State private var showingTwoFactor = false
     @State private var twoFactorCode = ""
     @State private var twoFactorContinuation: ((String) -> Void)?
     @State private var showAdvanced = false
+    @State private var showLog = false
 
     enum SigningState { case idle, signing, success, failed(String) }
+
+    struct LogLine: Identifiable {
+        let id = UUID()
+        let text: String
+        let level: Level
+        enum Level { case info, success, warning, error }
+        var color: Color {
+            switch level {
+            case .info:    return .secondary
+            case .success: return .green
+            case .warning: return .orange
+            case .error:   return .red
+            }
+        }
+        var icon: String {
+            switch level {
+            case .info:    return "→"
+            case .success: return "✓"
+            case .warning: return "⚠"
+            case .error:   return "✗"
+            }
+        }
+    }
 
     var body: some View {
         NavigationView {
@@ -46,6 +70,12 @@ struct SigningView: View {
 
                         if signingMethod == .appleID { appleIDSection } else { customCertSection }
                         advancedSection
+
+                        // Log panel — always visible while signing or after failure
+                        if !logLines.isEmpty {
+                            logPanel
+                        }
+
                         signButton
                     }
                     .padding(.vertical)
@@ -55,19 +85,89 @@ struct SigningView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                if !logLines.isEmpty {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(showLog ? "Hide Log" : "Show Log") {
+                            withAnimation { showLog.toggle() }
+                        }
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                    }
+                }
             }
             .onAppear {
-                // Pre-fill from saved default credentials
-                if config.appleID.isEmpty {
-                    config.appleID = appState.signingConfig.appleID
-                }
-                if config.password.isEmpty {
-                    config.password = appState.signingConfig.password
-                }
+                if config.appleID.isEmpty { config.appleID = appState.signingConfig.appleID }
+                if config.password.isEmpty { config.password = appState.signingConfig.password }
             }
             .sheet(isPresented: $showingTwoFactor) { twoFactorSheet }
         }
     }
+
+    // MARK: - Log Panel
+
+    var logPanel: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation { showLog.toggle() }
+            } label: {
+                HStack {
+                    Image(systemName: "terminal")
+                        .foregroundColor(.orange)
+                    Text("Activity Log")
+                        .font(.subheadline.bold())
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Text("\(logLines.count) lines")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Image(systemName: showLog ? "chevron.up" : "chevron.down")
+                        .foregroundColor(.secondary)
+                        .font(.caption)
+                }
+                .padding(12)
+            }
+
+            if showLog {
+                Divider()
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 3) {
+                            ForEach(logLines) { line in
+                                HStack(alignment: .top, spacing: 6) {
+                                    Text(line.icon)
+                                        .font(.system(size: 11, design: .monospaced))
+                                        .foregroundColor(line.color)
+                                        .frame(width: 12)
+                                    Text(line.text)
+                                        .font(.system(size: 11, design: .monospaced))
+                                        .foregroundColor(line.color)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .textSelection(.enabled)
+                                }
+                                .id(line.id)
+                            }
+                        }
+                        .padding(10)
+                    }
+                    .frame(height: 220)
+                    .onChange(of: logLines.count) { _ in
+                        if let last = logLines.last {
+                            withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+                        }
+                    }
+                }
+            }
+        }
+        .background(Color(.systemGray6))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12)
+            .strokeBorder(LinearGradient(colors: [.orange, .red],
+                startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
+        .padding(.horizontal)
+        .onAppear { showLog = true }
+    }
+
+    // MARK: - Sections
 
     var appleIDSection: some View {
         VStack(spacing: 12) {
@@ -179,24 +279,36 @@ struct SigningView: View {
                         .foregroundColor(.white).clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .disabled(!canSign).padding(.horizontal)
+
             case .signing:
                 VStack(spacing: 8) {
                     ProgressView()
-                    Text(progressMessage.isEmpty ? "Signing..." : progressMessage)
+                        .tint(.orange)
+                    Text(logLines.last?.text ?? "Signing...")
                         .font(.subheadline).foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                 }.padding()
+
             case .success:
                 VStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill").font(.largeTitle).foregroundColor(.green)
                     Text("Signed & installing!").font(.headline)
                     Button("Done") { dismiss() }.foregroundColor(.orange)
                 }.padding()
+
             case .failed(let msg):
                 VStack(spacing: 8) {
                     Image(systemName: "xmark.circle.fill").font(.largeTitle).foregroundColor(.red)
                     Text("Signing failed").font(.headline)
-                    Text(msg).font(.caption).foregroundColor(.secondary).multilineTextAlignment(.center)
-                    Button("Try Again") { signingState = .idle }.foregroundColor(.orange)
+                    Text(msg).font(.caption).foregroundColor(.secondary).multilineTextAlignment(.center).padding(.horizontal)
+                    Button { signingState = .idle; logLines = [] } label: {
+                        Text("Try Again")
+                            .font(.headline).frame(maxWidth: .infinity).padding()
+                            .background(LinearGradient(colors: [.orange, .red], startPoint: .leading, endPoint: .trailing))
+                            .foregroundColor(.white).clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .padding(.horizontal)
                 }.padding()
             }
         }
@@ -231,6 +343,8 @@ struct SigningView: View {
         }
     }
 
+    // MARK: - Helpers
+
     var canSign: Bool {
         switch signingMethod {
         case .appleID: return !config.appleID.isEmpty && !config.password.isEmpty
@@ -238,21 +352,37 @@ struct SigningView: View {
         }
     }
 
+    func log(_ text: String, level: LogLine.Level = .info) {
+        DispatchQueue.main.async {
+            logLines.append(LogLine(text: text, level: level))
+        }
+    }
+
     func startSigning() {
         signingState = .signing
+        logLines = []
+        showLog = true
+
         switch signingMethod {
         case .appleID:
+            log("Starting Apple ID signing...")
+            log("Apple ID: \(config.appleID)")
             SigningService.shared.signWithAppleID(
                 ipaURL: ipaURL, appleID: config.appleID, password: config.password,
                 bundleID: bundleID, appName: appName,
                 twoFactorHandler: { _, cont in
-                    DispatchQueue.main.async { twoFactorContinuation = cont; showingTwoFactor = true }
+                    DispatchQueue.main.async {
+                        self.log("2FA required — waiting for code...", level: .warning)
+                        twoFactorContinuation = cont
+                        showingTwoFactor = true
+                    }
                 },
-                progress: { msg in DispatchQueue.main.async { progressMessage = msg } },
+                progress: { msg in self.log(msg) },
                 completion: handleSigningResult
             )
         case .customP12:
             guard let p12 = p12Data, let provision = provisionData else { return }
+            log("Starting P12 signing...")
             SigningService.shared.signWithP12(
                 ipaURL: ipaURL, p12Data: p12, p12Password: p12Password,
                 provisionData: provision, bundleID: bundleID, appName: appName,
@@ -265,14 +395,26 @@ struct SigningView: View {
         DispatchQueue.main.async {
             switch result {
             case .success(let signedURL):
+                log("IPA signed successfully", level: .success)
+                log("Starting OTA install...", level: .info)
                 let expiry = Calendar.current.date(byAdding: .day, value: 7, to: Date())!
                 let app = SignedApp(name: appName.isEmpty ? ipaURL.lastPathComponent : appName,
                                    bundleID: bundleID, version: version,
                                    signedDate: Date(), expiryDate: expiry, iconData: iconData)
                 appState.installedApps.append(app)
                 signingState = .success
-                OTAInstallService.shared.install(ipaURL: signedURL, bundleID: bundleID, appName: appName, version: version)
+                OTAInstallService.shared.install(ipaURL: signedURL, bundleID: bundleID,
+                                                 appName: appName, version: version)
             case .failure(let error):
+                log("FAILED: \(error.localizedDescription)", level: .error)
+                // Log underlying error details if available
+                let nsError = error as NSError
+                if nsError.domain != "" {
+                    log("Domain: \(nsError.domain) Code: \(nsError.code)", level: .error)
+                }
+                if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
+                    log("Underlying: \(underlying.localizedDescription)", level: .error)
+                }
                 signingState = .failed(error.localizedDescription)
             }
         }
