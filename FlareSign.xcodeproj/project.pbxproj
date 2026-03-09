@@ -55,22 +55,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		D000000000000001 /* FlareSign */ = {
-			isa = PBXGroup;
-			children = (
-				D000000100000002 /* app */,
-				D000000200000003 /* views */,
-				D000000300000004 /* models */,
-				D000000400000005 /* services */,
-				A00100015000000F /* ZsignWrapper.h */,
-				A00100014000000E /* ZsignWrapper.mm */,
-				A001000160000010 /* FlareSign-Bridging-Header.h */,
-				A001000170000011 /* Info.plist */,
-			);
-			name = FlareSign;
-			path = "";
-			sourceTree = SOURCE_ROOT;
-		};
 		D000000100000002 /* app */ = {
 			isa = PBXGroup;
 			children = (
@@ -111,6 +95,21 @@
 			);
 			path = services;
 			sourceTree = "<group>";
+		};
+		D000000000000001 /* FlareSign */ = {
+			isa = PBXGroup;
+			children = (
+				D000000100000002 /* app */,
+				D000000200000003 /* views */,
+				D000000300000004 /* models */,
+				D000000400000005 /* services */,
+				A00100015000000F /* ZsignWrapper.h */,
+				A00100014000000E /* ZsignWrapper.mm */,
+				A001000160000010 /* FlareSign-Bridging-Header.h */,
+				A001000170000011 /* Info.plist */,
+			);
+			name = FlareSign;
+			sourceTree = SOURCE_ROOT;
 		};
 		E000000000000001 /* Products */ = {
 			isa = PBXGroup;
@@ -282,7 +281,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.flaresign.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "FlareSign-Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "$(SRCROOT)/FlareSign-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -306,7 +305,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.flaresign.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "FlareSign-Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "$(SRCROOT)/FlareSign-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
