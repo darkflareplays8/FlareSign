@@ -25,6 +25,23 @@ jobs:
       - name: Select Xcode 15.4
         run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
 
+      - name: Set version from run number
+        id: version
+        run: |
+          # Auto version: 1.0.<run_number>  e.g. build 28 → 1.0.28
+          VERSION="1.0.${{ github.run_number }}"
+          BUILD="${{ github.run_number }}"
+
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "BUILD=$BUILD" >> $GITHUB_ENV
+          echo "ver=$VERSION" >> $GITHUB_OUTPUT
+
+          # Write into Info.plist so the app itself reports the correct version
+          plutil -replace CFBundleShortVersionString -string "$VERSION" Info.plist
+          plutil -replace CFBundleVersion -string "$BUILD" Info.plist
+
+          echo "Set version $VERSION (build $BUILD)"
+
       - name: Generate app icons from source image
         run: |
           SOURCE="Assets.xcassets/AppIcon.appiconset/icon-source.png"
@@ -58,7 +75,6 @@ jobs:
           PYEOF
           fi
 
-          # Generate all required sizes using sips (built into macOS — no extra tools needed)
           generate() {
             local size=$1
             local name=$2
@@ -79,14 +95,6 @@ jobs:
           generate 1024 icon-1024.png
 
           echo "Icons generated successfully"
-
-      - name: Sync version from Info.plist
-        run: |
-          VERSION=$(plutil -extract CFBundleShortVersionString raw Info.plist)
-          BUILD=$(plutil -extract CFBundleVersion raw Info.plist)
-          echo "Version: $VERSION  Build: $BUILD"
-          echo "MARKETING_VERSION = $VERSION" > version.xcconfig
-          echo "CURRENT_PROJECT_VERSION = $BUILD" >> version.xcconfig
 
       - name: Download ldid (iOS ARM64)
         run: |
@@ -111,8 +119,8 @@ jobs:
             -configuration ${{ github.event.inputs.configuration || 'Release' }} \
             -destination "generic/platform=iOS" \
             -archivePath build/FlareSign.xcarchive \
-            MARKETING_VERSION=$(plutil -extract CFBundleShortVersionString raw Info.plist) \
-            CURRENT_PROJECT_VERSION=$(plutil -extract CFBundleVersion raw Info.plist) \
+            MARKETING_VERSION="${{ env.VERSION }}" \
+            CURRENT_PROJECT_VERSION="${{ env.BUILD }}" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -131,14 +139,10 @@ jobs:
           cp -r "$APP_PATH" build/Payload/
           cd build && zip -r FlareSign.ipa Payload/ && rm -rf Payload/
 
-      - name: Get version for release tag
-        id: version
-        run: echo "ver=$(plutil -extract CFBundleShortVersionString raw Info.plist)" >> $GITHUB_OUTPUT
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: FlareSign-${{ github.run_number }}
+          name: FlareSign-${{ steps.version.outputs.ver }}
           path: build/FlareSign.ipa
           retention-days: 30
           if-no-files-found: error
@@ -147,8 +151,8 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.ver }}.${{ github.run_number }}
-          name: FlareSign v${{ steps.version.outputs.ver }}.${{ github.run_number }}
+          tag_name: v${{ steps.version.outputs.ver }}
+          name: FlareSign v${{ steps.version.outputs.ver }}
           files: build/FlareSign.ipa
           body: "Build ${{ github.run_number }} — ${{ github.event.head_commit.message }}"
         env:
