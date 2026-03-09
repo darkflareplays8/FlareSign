@@ -69,6 +69,7 @@ struct DefaultCredentialsView: View {
                 Button("Save") {
                     appState.signingConfig.appleID = appleID
                     appState.signingConfig.password = password
+                    appState.saveSigningConfig()
                     saved = true
                 }
                 .foregroundColor(.orange)
