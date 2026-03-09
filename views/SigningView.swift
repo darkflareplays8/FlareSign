@@ -1,240 +1,270 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct SigningView: View {
-    @EnvironmentObject var appState: AppState
-    @Environment(\.dismiss) var dismiss
+enum SigningMethod: String, CaseIterable {
+    case appleID = "Apple ID"
+    case customP12 = "Custom Certificate"
+}
 
+struct SigningView: View {
     let ipaURL: URL
     @Binding var appName: String
     @Binding var bundleID: String
     let version: String
     let iconData: Data?
 
-    @State private var appleID = ""
-    @State private var password = ""
-    @State private var overrideName = ""
-    @State private var overrideBundleID = ""
-    @State private var useCustomProfile = false
-    @State private var profileData: Data?
-    @State private var showProfilePicker = false
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) var dismiss
+
+    @StateObject private var config = SigningConfig()
+    @State private var signingMethod: SigningMethod = .appleID
+    @State private var p12Data: Data?
+    @State private var p12Password = ""
+    @State private var provisionData: Data?
+    @State private var showingP12Picker = false
+    @State private var showingProvisionPicker = false
     @State private var signingState: SigningState = .idle
-    @State private var errorMessage = ""
+    @State private var progressMessage = ""
+    @State private var showingTwoFactor = false
+    @State private var twoFactorCode = ""
+    @State private var twoFactorContinuation: ((String) -> Void)?
     @State private var showAdvanced = false
 
-    enum SigningState { case idle, signing, success, failed }
+    enum SigningState { case idle, signing, success, failed(String) }
 
     var body: some View {
         NavigationView {
             ZStack {
-                Color(.systemGroupedBackground).ignoresSafeArea()
+                Color(.systemBackground).ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 20) {
-                        appHeaderCard
-                        if signingState == .idle || signingState == .failed {
-                            credentialsCard
-                            advancedCard
-                            if signingState == .failed { errorCard }
-                            signButton
-                        } else if signingState == .signing {
-                            signingProgressCard
-                        } else if signingState == .success {
-                            successCard
+                        Picker("Method", selection: $signingMethod) {
+                            ForEach(SigningMethod.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                         }
+                        .pickerStyle(.segmented)
+                        .padding(.horizontal)
+
+                        if signingMethod == .appleID { appleIDSection } else { customCertSection }
+                        advancedSection
+                        signButton
                     }
-                    .padding()
+                    .padding(.vertical)
                 }
             }
             .navigationTitle("Sign IPA")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            }
+            .sheet(isPresented: $showingTwoFactor) { twoFactorSheet }
+        }
+    }
+
+    var appleIDSection: some View {
+        VStack(spacing: 12) {
+            GroupBox {
+                VStack(spacing: 12) {
+                    TextField("Apple ID", text: $config.appleID)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.emailAddress)
+                        .autocorrectionDisabled()
+                    Divider()
+                    SecureField("Password", text: $config.password)
                 }
+                .padding(4)
+            } label: {
+                Label("Apple ID Credentials", systemImage: "person.circle").foregroundColor(.orange)
+            }
+            .padding(.horizontal)
+            Text("Uses a free 7-day developer certificate via anisette server.")
+                .font(.caption).foregroundColor(.secondary).multilineTextAlignment(.center).padding(.horizontal)
+        }
+    }
+
+    var customCertSection: some View {
+        VStack(spacing: 12) {
+            GroupBox {
+                VStack(spacing: 12) {
+                    Button { showingP12Picker = true } label: {
+                        HStack {
+                            Image(systemName: p12Data != nil ? "checkmark.circle.fill" : "doc.badge.plus")
+                                .foregroundColor(p12Data != nil ? .green : .orange)
+                            Text(p12Data != nil ? "P12 loaded" : "Select .p12 certificate")
+                                .foregroundColor(p12Data != nil ? .primary : .orange)
+                            Spacer()
+                        }
+                    }
+                    if p12Data != nil {
+                        Divider()
+                        SecureField("P12 Password (if any)", text: $p12Password)
+                    }
+                    Divider()
+                    Button { showingProvisionPicker = true } label: {
+                        HStack {
+                            Image(systemName: provisionData != nil ? "checkmark.circle.fill" : "doc.badge.plus")
+                                .foregroundColor(provisionData != nil ? .green : .orange)
+                            Text(provisionData != nil ? "Profile loaded" : "Select .mobileprovision")
+                                .foregroundColor(provisionData != nil ? .primary : .orange)
+                            Spacer()
+                        }
+                    }
+                }
+                .padding(4)
+            } label: {
+                Label("Certificate & Profile", systemImage: "lock.shield").foregroundColor(.orange)
+            }
+            .padding(.horizontal)
+        }
+        .fileImporter(isPresented: $showingP12Picker,
+                      allowedContentTypes: [UTType(filenameExtension: "p12") ?? .data],
+                      allowsMultipleSelection: false) { result in
+            if case .success(let urls) = result, let url = urls.first {
+                _ = url.startAccessingSecurityScopedResource()
+                p12Data = try? Data(contentsOf: url)
             }
         }
-        .fileImporter(isPresented: $showProfilePicker,
+        .fileImporter(isPresented: $showingProvisionPicker,
                       allowedContentTypes: [UTType(filenameExtension: "mobileprovision") ?? .data],
                       allowsMultipleSelection: false) { result in
             if case .success(let urls) = result, let url = urls.first {
-                profileData = try? Data(contentsOf: url)
+                _ = url.startAccessingSecurityScopedResource()
+                provisionData = try? Data(contentsOf: url)
             }
-        }
-        .onAppear {
-            appleID = appState.signingConfig.appleID
-            password = appState.signingConfig.password
         }
     }
 
-    private var appHeaderCard: some View {
-        HStack(spacing: 16) {
-            if let data = iconData, let uiImage = UIImage(data: data) {
-                Image(uiImage: uiImage).resizable().frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            } else {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(LinearGradient(colors: [.orange, .red], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 56, height: 56)
-                    .overlay(Image(systemName: "app.fill").foregroundColor(.white))
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(appName.isEmpty ? ipaURL.lastPathComponent : appName).font(.headline).lineLimit(1)
-                Text(bundleID).font(.caption).foregroundColor(.secondary).lineLimit(1)
-                Text("v\(version)").font(.caption2).foregroundColor(.orange)
-            }
-            Spacer()
-        }
-        .padding()
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
-    }
-
-    private var credentialsCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Toggle("Use custom provisioning profile", isOn: $useCustomProfile).tint(.orange)
-
-            if useCustomProfile {
-                Button { showProfilePicker = true } label: {
+    var advancedSection: some View {
+        GroupBox {
+            VStack(spacing: 10) {
+                Button { withAnimation { showAdvanced.toggle() } } label: {
                     HStack {
-                        Image(systemName: profileData == nil ? "doc.badge.plus" : "doc.fill.badge.checkmark")
-                        Text(profileData == nil ? "Select .mobileprovision" : "Profile loaded")
+                        Text("Advanced Options").font(.subheadline.bold()).foregroundColor(.primary)
+                        Spacer()
+                        Image(systemName: showAdvanced ? "chevron.up" : "chevron.down").foregroundColor(.secondary)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color.orange.opacity(0.1)))
-                    .foregroundColor(.orange)
                 }
-            } else {
-                VStack(spacing: 12) {
-                    TextField("Apple ID (email)", text: $appleID)
-                        .textContentType(.emailAddress).autocapitalization(.none)
-                        .padding()
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color(.tertiarySystemBackground)))
-                    SecureField("Password", text: $password)
-                        .textContentType(.password)
-                        .padding()
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color(.tertiarySystemBackground)))
+                if showAdvanced {
+                    Divider()
+                    TextField("Bundle ID override", text: $bundleID)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .font(.system(.body, design: .monospaced))
+                    Divider()
+                    TextField("App name override", text: $appName)
                 }
-                Text("Credentials are only used locally for signing and are never transmitted.")
-                    .font(.caption2).foregroundColor(.secondary)
+            }
+            .padding(4)
+        }
+        .padding(.horizontal)
+    }
+
+    var signButton: some View {
+        VStack(spacing: 12) {
+            switch signingState {
+            case .idle:
+                Button { startSigning() } label: {
+                    Label("Sign & Install", systemImage: "flame.fill")
+                        .font(.headline).frame(maxWidth: .infinity).padding()
+                        .background(canSign
+                            ? LinearGradient(colors: [.orange, .red], startPoint: .leading, endPoint: .trailing)
+                            : LinearGradient(colors: [.gray], startPoint: .leading, endPoint: .trailing))
+                        .foregroundColor(.white).clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .disabled(!canSign).padding(.horizontal)
+            case .signing:
+                VStack(spacing: 8) {
+                    ProgressView()
+                    Text(progressMessage.isEmpty ? "Signing..." : progressMessage)
+                        .font(.subheadline).foregroundColor(.secondary)
+                }.padding()
+            case .success:
+                VStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill").font(.largeTitle).foregroundColor(.green)
+                    Text("Signed & installing!").font(.headline)
+                    Button("Done") { dismiss() }.foregroundColor(.orange)
+                }.padding()
+            case .failed(let msg):
+                VStack(spacing: 8) {
+                    Image(systemName: "xmark.circle.fill").font(.largeTitle).foregroundColor(.red)
+                    Text("Signing failed").font(.headline)
+                    Text(msg).font(.caption).foregroundColor(.secondary).multilineTextAlignment(.center)
+                    Button("Try Again") { signingState = .idle }.foregroundColor(.orange)
+                }.padding()
             }
         }
-        .padding()
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
     }
 
-    private var advancedCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Button { withAnimation { showAdvanced.toggle() } } label: {
-                HStack {
-                    Text("Advanced").font(.subheadline.bold())
-                    Spacer()
-                    Image(systemName: showAdvanced ? "chevron.up" : "chevron.down").foregroundColor(.secondary)
+    var twoFactorSheet: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                Image(systemName: "lock.shield.fill").font(.system(size: 48))
+                    .foregroundStyle(LinearGradient(colors: [.orange, .red], startPoint: .top, endPoint: .bottom))
+                Text("Two-Factor Authentication").font(.title2.bold())
+                Text("Enter the 6-digit code sent to your trusted devices.")
+                    .font(.subheadline).foregroundColor(.secondary).multilineTextAlignment(.center)
+                TextField("000000", text: $twoFactorCode)
+                    .keyboardType(.numberPad).multilineTextAlignment(.center)
+                    .font(.system(size: 32, weight: .bold, design: .monospaced))
+                    .frame(maxWidth: 160).padding()
+                    .background(Color(.secondarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                Button {
+                    showingTwoFactor = false
+                    twoFactorContinuation?(twoFactorCode)
+                    twoFactorCode = ""
+                } label: {
+                    Text("Submit").font(.headline).frame(maxWidth: .infinity).padding()
+                        .background(LinearGradient(colors: [.orange, .red], startPoint: .leading, endPoint: .trailing))
+                        .foregroundColor(.white).clipShape(RoundedRectangle(cornerRadius: 14))
                 }
-                .padding()
+                .padding(.horizontal).disabled(twoFactorCode.count < 6)
             }
-            .foregroundColor(.primary)
-
-            if showAdvanced {
-                VStack(spacing: 12) {
-                    TextField("Override app name (optional)", text: $overrideName)
-                        .padding()
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color(.tertiarySystemBackground)))
-                    TextField("Override bundle ID (optional)", text: $overrideBundleID)
-                        .autocapitalization(.none)
-                        .padding()
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Color(.tertiarySystemBackground)))
-                }
-                .padding([.horizontal, .bottom])
-            }
+            .padding().navigationTitle("Verification").navigationBarTitleDisplayMode(.inline)
         }
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
     }
 
-    private var errorCard: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle.fill").foregroundColor(.red)
-            Text(errorMessage).font(.caption).foregroundColor(.red)
+    var canSign: Bool {
+        switch signingMethod {
+        case .appleID: return !config.appleID.isEmpty && !config.password.isEmpty
+        case .customP12: return p12Data != nil && provisionData != nil
         }
-        .padding()
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color.red.opacity(0.1)))
     }
 
-    private var signButton: some View {
-        Button { startSigning() } label: {
-            Label("Sign & Install", systemImage: "flame.fill")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(LinearGradient(colors: [.orange, .red], startPoint: .leading, endPoint: .trailing))
-                .foregroundColor(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-        }
-        .disabled(!canSign)
-        .opacity(canSign ? 1 : 0.5)
-    }
-
-    private var canSign: Bool {
-        useCustomProfile ? profileData != nil : (!appleID.isEmpty && !password.isEmpty)
-    }
-
-    private var signingProgressCard: some View {
-        VStack(spacing: 20) {
-            ProgressView().scaleEffect(1.5).tint(.orange)
-            Text("Signing IPA...").font(.headline)
-            Text("This may take a moment").font(.caption).foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(40)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
-    }
-
-    private var successCard: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(LinearGradient(colors: [.orange, .red], startPoint: .top, endPoint: .bottom))
-            Text("Signed & Installing!").font(.title2.bold())
-            Text("Check your Home Screen in a moment.")
-                .font(.subheadline).foregroundColor(.secondary).multilineTextAlignment(.center)
-            Button("Done") { dismiss() }
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(LinearGradient(colors: [.orange, .red], startPoint: .leading, endPoint: .trailing))
-                .foregroundColor(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(32)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
-    }
-
-    private func startSigning() {
+    func startSigning() {
         signingState = .signing
-        let finalBundleID = overrideBundleID.isEmpty ? bundleID : overrideBundleID
-        let finalName = overrideName.isEmpty ? appName : overrideName
+        switch signingMethod {
+        case .appleID:
+            SigningService.shared.signWithAppleID(
+                ipaURL: ipaURL, appleID: config.appleID, password: config.password,
+                bundleID: bundleID, appName: appName,
+                twoFactorHandler: { _, cont in
+                    DispatchQueue.main.async { twoFactorContinuation = cont; showingTwoFactor = true }
+                },
+                progress: { msg in DispatchQueue.main.async { progressMessage = msg } },
+                completion: handleSigningResult
+            )
+        case .customP12:
+            guard let p12 = p12Data, let provision = provisionData else { return }
+            SigningService.shared.signWithP12(
+                ipaURL: ipaURL, p12Data: p12, p12Password: p12Password,
+                provisionData: provision, bundleID: bundleID, appName: appName,
+                completion: handleSigningResult
+            )
+        }
+    }
 
-        SigningService.shared.sign(
-            ipaURL: ipaURL,
-            appleID: useCustomProfile ? nil : appleID,
-            password: useCustomProfile ? nil : password,
-            provisioningProfile: profileData,
-            bundleID: finalBundleID,
-            appName: finalName
-        ) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let signedURL):
-                    let app = SignedApp(name: finalName, bundleID: finalBundleID, version: version,
-                                       signedDate: Date(),
-                                       expiryDate: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date())
-                    appState.addInstalledApp(app)
-                    OTAInstallService.shared.install(ipaURL: signedURL, bundleID: finalBundleID, appName: finalName)
-                    signingState = .success
-                case .failure(let error):
-                    errorMessage = error.localizedDescription
-                    signingState = .failed
-                }
+    func handleSigningResult(_ result: Result<URL, Error>) {
+        DispatchQueue.main.async {
+            switch result {
+            case .success(let signedURL):
+                let expiry = Calendar.current.date(byAdding: .day, value: 7, to: Date())!
+                let app = SignedApp(name: appName.isEmpty ? ipaURL.lastPathComponent : appName,
+                                   bundleID: bundleID, version: version,
+                                   signedDate: Date(), expiryDate: expiry, iconData: iconData)
+                appState.installedApps.append(app)
+                signingState = .success
+                OTAInstallService.shared.install(ipaURL: signedURL, bundleID: bundleID) { _ in }
+            case .failure(let error):
+                signingState = .failed(error.localizedDescription)
             }
         }
     }
