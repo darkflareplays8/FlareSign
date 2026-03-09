@@ -3,9 +3,14 @@ import SwiftUI
 class AppState: ObservableObject {
     @Published var installedApps: [SignedApp] = []
     @Published var signingConfig = SigningConfig()
-    private let appsKey = "flaresign.installedApps"
 
-    init() { loadInstalledApps() }
+    private let appsKey   = "flaresign.installedApps"
+    private let configKey = "flaresign.signingConfig"
+
+    init() {
+        loadInstalledApps()
+        loadSigningConfig()
+    }
 
     func addInstalledApp(_ app: SignedApp) {
         installedApps.removeAll { $0.bundleID == app.bundleID }
@@ -18,6 +23,18 @@ class AppState: ObservableObject {
         installedApps.removeAll { $0.id == app.id }
         saveInstalledApps()
         RenewalManager.shared.cancelRenewalNotification(for: app)
+    }
+
+    func saveSigningConfig() {
+        signingConfig.save()
+        if let data = try? JSONEncoder().encode(signingConfig) {
+            UserDefaults.standard.set(data, forKey: configKey)
+        }
+    }
+
+    private func loadSigningConfig() {
+        // SigningConfig.init() already loads from UserDefaults + Keychain
+        // This is just a no-op placeholder in case we need extra loading later
     }
 
     private func saveInstalledApps() {
