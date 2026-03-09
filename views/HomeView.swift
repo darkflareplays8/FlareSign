@@ -83,35 +83,34 @@ struct HomeView: View {
                 }
             }
             .navigationBarHidden(true)
-        }
-        }
-        .fileImporter(isPresented: $showingFilePicker,
-                      allowedContentTypes: [UTType(filenameExtension: "ipa") ?? .data],
-                      allowsMultipleSelection: false) { result in
-            switch result {
-            case .success(let urls):
-                guard let url = urls.first else { return }
-                guard url.startAccessingSecurityScopedResource() else { return }
-                selectedIPAURL = url
-                IPAParser.parse(url: url) { info in
-                    DispatchQueue.main.async {
-                        detectedAppName = info.name
-                        detectedBundleID = info.bundleID
-                        detectedVersion = info.version
-                        detectedIconData = info.iconData
-                        url.stopAccessingSecurityScopedResource()
+            .fileImporter(isPresented: $showingFilePicker,
+                          allowedContentTypes: [UTType(filenameExtension: "ipa") ?? .data],
+                          allowsMultipleSelection: false) { result in
+                switch result {
+                case .success(let urls):
+                    guard let url = urls.first else { return }
+                    guard url.startAccessingSecurityScopedResource() else { return }
+                    selectedIPAURL = url
+                    IPAParser.parse(url: url) { info in
+                        DispatchQueue.main.async {
+                            detectedAppName = info.name
+                            detectedBundleID = info.bundleID
+                            detectedVersion = info.version
+                            detectedIconData = info.iconData
+                            url.stopAccessingSecurityScopedResource()
+                        }
                     }
+                case .failure(let error):
+                    print("File picker error: \(error.localizedDescription)")
                 }
-            case .failure(let error):
-                print("File picker error: \(error.localizedDescription)")
             }
-        }
-        .sheet(isPresented: $showingSigningSheet) {
-            if let url = selectedIPAURL {
-                SigningView(ipaURL: url, appName: $detectedAppName,
-                            bundleID: $detectedBundleID, version: detectedVersion,
-                            iconData: detectedIconData)
-                    .environmentObject(appState)
+            .sheet(isPresented: $showingSigningSheet) {
+                if let url = selectedIPAURL {
+                    SigningView(ipaURL: url, appName: $detectedAppName,
+                                bundleID: $detectedBundleID, version: detectedVersion,
+                                iconData: detectedIconData)
+                        .environmentObject(appState)
+                }
             }
         }
     }
