@@ -34,7 +34,8 @@ struct SettingsView: View {
                         Label("FlareSign", systemImage: "flame.fill")
                             .foregroundStyle(LinearGradient(colors: [.orange, .red], startPoint: .leading, endPoint: .trailing))
                         Spacer()
-                        Text("1.0.0").font(.caption).foregroundColor(.secondary)
+                        Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
+                            .font(.caption).foregroundColor(.secondary)
                     }
                 }
             }
