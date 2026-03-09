@@ -88,7 +88,7 @@ struct HomeView: View {
                       allowedContentTypes: [UTType(filenameExtension: "ipa") ?? .data],
                       allowsMultipleSelection: false) { result in
             if case .success(let urls) = result, let url = urls.first {
-                url.startAccessingSecurityScopedResource()
+                _ = url.startAccessingSecurityScopedResource()
                 selectedIPAURL = url
                 IPAParser.parse(url: url) { info in
                     DispatchQueue.main.async {
