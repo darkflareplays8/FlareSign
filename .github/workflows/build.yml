@@ -25,11 +25,73 @@ jobs:
       - name: Select Xcode 15.4
         run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
 
+      - name: Generate app icons from source image
+        run: |
+          SOURCE="Assets.xcassets/AppIcon.appiconset/icon-source.png"
+          DEST="Assets.xcassets/AppIcon.appiconset"
+
+          if [ ! -f "$SOURCE" ]; then
+            echo "No icon-source.png found — generating a default orange placeholder"
+            python3 - <<'PYEOF'
+          import struct, zlib
+
+          def make_png(size, top=(255,100,0), bottom=(200,0,0)):
+              w, h = size, size
+              raw = []
+              for y in range(h):
+                  t = y / (h - 1)
+                  r = int(top[0] + t * (bottom[0] - top[0]))
+                  g = int(top[1] + t * (bottom[1] - top[1]))
+                  b = int(top[2] + t * (bottom[2] - top[2]))
+                  row = b'\x00' + bytes([r, g, b] * w)
+                  raw.append(row)
+              raw_data = b''.join(raw)
+              def chunk(name, data):
+                  c = struct.pack('>I', len(data)) + name + data
+                  return c + struct.pack('>I', zlib.crc32(name + data) & 0xffffffff)
+              ihdr = struct.pack('>IIBBBBB', w, h, 8, 2, 0, 0, 0)
+              idat = zlib.compress(raw_data)
+              return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', ihdr) + chunk(b'IDAT', idat) + chunk(b'IEND', b'')
+
+          with open('Assets.xcassets/AppIcon.appiconset/icon-source.png', 'wb') as f:
+              f.write(make_png(1024))
+          PYEOF
+          fi
+
+          # Generate all required sizes using sips (built into macOS — no extra tools needed)
+          generate() {
+            local size=$1
+            local name=$2
+            sips -z $size $size "$SOURCE" --out "$DEST/$name" > /dev/null
+          }
+
+          generate 40   icon-20@2x.png
+          generate 60   icon-20@3x.png
+          generate 58   icon-29@2x.png
+          generate 87   icon-29@3x.png
+          generate 80   icon-40@2x.png
+          generate 120  icon-40@3x.png
+          generate 120  icon-60@2x.png
+          generate 180  icon-60@3x.png
+          generate 76   icon-76@1x.png
+          generate 152  icon-76@2x.png
+          generate 167  icon-83.5@2x.png
+          generate 1024 icon-1024.png
+
+          echo "Icons generated successfully"
+
+      - name: Sync version from Info.plist
+        run: |
+          VERSION=$(plutil -extract CFBundleShortVersionString raw Info.plist)
+          BUILD=$(plutil -extract CFBundleVersion raw Info.plist)
+          echo "Version: $VERSION  Build: $BUILD"
+          echo "MARKETING_VERSION = $VERSION" > version.xcconfig
+          echo "CURRENT_PROJECT_VERSION = $BUILD" >> version.xcconfig
+
       - name: Download ldid (iOS ARM64)
         run: |
           curl -L -o ldid https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_iphoneos_arm64
           chmod +x ldid
-          # Place in a Resources folder so Bundle.main.path(forResource:) finds it
           mkdir -p resources
           mv ldid resources/ldid
 
@@ -49,6 +111,8 @@ jobs:
             -configuration ${{ github.event.inputs.configuration || 'Release' }} \
             -destination "generic/platform=iOS" \
             -archivePath build/FlareSign.xcarchive \
+            MARKETING_VERSION=$(plutil -extract CFBundleShortVersionString raw Info.plist) \
+            CURRENT_PROJECT_VERSION=$(plutil -extract CFBundleVersion raw Info.plist) \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
@@ -67,6 +131,10 @@ jobs:
           cp -r "$APP_PATH" build/Payload/
           cd build && zip -r FlareSign.ipa Payload/ && rm -rf Payload/
 
+      - name: Get version for release tag
+        id: version
+        run: echo "ver=$(plutil -extract CFBundleShortVersionString raw Info.plist)" >> $GITHUB_OUTPUT
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -79,8 +147,8 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: FlareSign v1.0.${{ github.run_number }}
+          tag_name: v${{ steps.version.outputs.ver }}.${{ github.run_number }}
+          name: FlareSign v${{ steps.version.outputs.ver }}.${{ github.run_number }}
           files: build/FlareSign.ipa
           body: "Build ${{ github.run_number }} — ${{ github.event.head_commit.message }}"
         env:
