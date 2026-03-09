@@ -48,7 +48,7 @@ jobs:
             -scheme ${{ env.SCHEME }} \
             -clonedSourcePackagesDirPath SourcePackages
 
-      - name: Build unsigned IPA
+      - name: Build unsigned archive
         run: |
           mkdir -p build
           xcodebuild archive \
@@ -64,12 +64,18 @@ jobs:
             SWIFT_OBJC_BRIDGING_HEADER="FlareSign/FlareSign-Bridging-Header.h" \
             | xcpretty
 
+      - name: Debug archive contents
+        run: find build/${{ env.APP_NAME }}.xcarchive -name "*.app" | head -5
+
       - name: Package IPA
         run: |
-          mkdir -p build/ipa/Payload
-          cp -r build/${{ env.APP_NAME }}.xcarchive/Products/Applications/${{ env.APP_NAME }}.app build/ipa/Payload/
-          cd build/ipa
-          zip -r ../${{ env.APP_NAME }}.ipa Payload/
+          APP_PATH=$(find build/${{ env.APP_NAME }}.xcarchive -name "*.app" -maxdepth 4 | head -1)
+          echo "App path: $APP_PATH"
+          mkdir -p build/Payload
+          cp -r "$APP_PATH" build/Payload/
+          cd build
+          zip -r ${{ env.APP_NAME }}.ipa Payload/
+          rm -rf Payload/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
