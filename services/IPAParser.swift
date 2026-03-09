@@ -73,8 +73,8 @@ class IPAParser {
                 info.version   = plist["CFBundleShortVersionString"] as? String ?? ""
 
                 // Find icon name from plist
-                let primaryIcon = (plist["CFBundleIcons"] as? [String: Any])?
-                    ["CFBundlePrimaryIcon"] as? [String: Any]
+                let iconsDict = plist["CFBundleIcons"] as? [String: Any]
+                let primaryIcon = iconsDict?["CFBundlePrimaryIcon"] as? [String: Any]
                 let iconName = (primaryIcon?["CFBundleIconFiles"] as? [String])?.last
                     ?? (plist["CFBundleIconFiles"] as? [String])?.last
 
