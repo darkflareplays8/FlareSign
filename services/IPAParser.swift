@@ -18,14 +18,25 @@ class IPAParser {
                 try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
                 defer { try? FileManager.default.removeItem(at: tmp) }
 
-                let process = Process()
-                process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
-                process.arguments = ["-o", url.path, "Payload/*.app/Info.plist", "Payload/*.app/AppIcon*", "-d", tmp.path]
-                try process.run()
-                process.waitUntilExit()
+                // Unzip IPA using ZipFoundation-style manual extraction
+                guard let archive = try? Data(contentsOf: url) else {
+                    completion(info); return
+                }
+
+                // Write to temp and use unzip via posix_spawn (available on iOS)
+                let ipaTemp = tmp.appendingPathComponent("app.ipa")
+                try archive.write(to: ipaTemp)
+
+                var pid: pid_t = 0
+                let args = ["unzip", "-o", ipaTemp.path, "Payload/*.app/Info.plist", "Payload/*.app/AppIcon*", "-d", tmp.path]
+                var cArgs = args.map { strdup($0) }
+                cArgs.append(nil)
+                posix_spawn(&pid, "/usr/bin/unzip", nil, nil, &cArgs, nil)
+                cArgs.dropLast().forEach { free($0) }
+                waitpid(pid, nil, 0)
 
                 let payload = tmp.appendingPathComponent("Payload")
-                let apps = try FileManager.default.contentsOfDirectory(at: payload, includingPropertiesForKeys: nil)
+                let apps = (try? FileManager.default.contentsOfDirectory(at: payload, includingPropertiesForKeys: nil)) ?? []
                 guard let appDir = apps.first(where: { $0.pathExtension == "app" }) else {
                     completion(info); return
                 }
