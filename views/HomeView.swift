@@ -1,6 +1,36 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import UIKit
 
+// MARK: - UIDocumentPicker wrapper (replaces .fileImporter which breaks on iOS)
+struct DocumentPicker: UIViewControllerRepresentable {
+    let onPick: (URL) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick) }
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        // Use public.data + public.content so ALL files show and are tappable
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.data, .content], asCopy: true)
+        picker.allowsMultipleSelection = false
+        picker.shouldShowFileExtensions = true
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+
+    class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let onPick: (URL) -> Void
+        init(onPick: @escaping (URL) -> Void) { self.onPick = onPick }
+
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first else { return }
+            onPick(url)
+        }
+    }
+}
+
+// MARK: - HomeView
 struct HomeView: View {
     @EnvironmentObject var appState: AppState
     @State private var showingFilePicker = false
@@ -83,13 +113,9 @@ struct HomeView: View {
                 }
             }
             .navigationBarHidden(true)
-            .fileImporter(isPresented: $showingFilePicker,
-                          allowedContentTypes: [.item],
-                          allowsMultipleSelection: false) { result in
-                switch result {
-                case .success(let urls):
-                    guard let url = urls.first else { return }
-                    guard url.startAccessingSecurityScopedResource() else { return }
+            .sheet(isPresented: $showingFilePicker) {
+                DocumentPicker { url in
+                    showingFilePicker = false
                     selectedIPAURL = url
                     IPAParser.parse(url: url) { info in
                         DispatchQueue.main.async {
@@ -97,11 +123,8 @@ struct HomeView: View {
                             detectedBundleID = info.bundleID
                             detectedVersion = info.version
                             detectedIconData = info.iconData
-                            url.stopAccessingSecurityScopedResource()
                         }
                     }
-                case .failure(let error):
-                    print("File picker error: \(error.localizedDescription)")
                 }
             }
             .sheet(isPresented: $showingSigningSheet) {
@@ -116,6 +139,7 @@ struct HomeView: View {
     }
 }
 
+// MARK: - IPAPreviewCard
 struct IPAPreviewCard: View {
     let url: URL
     let appName: String
