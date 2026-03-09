@@ -1,0 +1,411 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B001000100000001 /* FlareSignApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001000100000001 /* FlareSignApp.swift */; };
+		B001000200000002 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001000200000002 /* AppState.swift */; };
+		B001000300000003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001000300000003 /* ContentView.swift */; };
+		B001000400000004 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001000400000004 /* HomeView.swift */; };
+		B001000500000005 /* SigningView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001000500000005 /* SigningView.swift */; };
+		B001000600000006 /* InstalledAppsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001000600000006 /* InstalledAppsView.swift */; };
+		B001000700000007 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001000700000007 /* SettingsView.swift */; };
+		B001000800000008 /* SignedApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001000800000008 /* SignedApp.swift */; };
+		B001000900000009 /* SigningConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001000900000009 /* SigningConfig.swift */; };
+		B00100010000000A /* SigningService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00100010000000A /* SigningService.swift */; };
+		B00100011000000B /* IPAParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00100011000000B /* IPAParser.swift */; };
+		B00100012000000C /* OTAInstallService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00100012000000C /* OTAInstallService.swift */; };
+		B00100013000000D /* RenewalManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00100013000000D /* RenewalManager.swift */; };
+		B00100014000000E /* ZsignWrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = A00100014000000E /* ZsignWrapper.mm */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A001000100000001 /* FlareSignApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlareSignApp.swift; sourceTree = "<group>"; };
+		A001000200000002 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		A001000300000003 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A001000400000004 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		A001000500000005 /* SigningView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SigningView.swift; sourceTree = "<group>"; };
+		A001000600000006 /* InstalledAppsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstalledAppsView.swift; sourceTree = "<group>"; };
+		A001000700000007 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A001000800000008 /* SignedApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignedApp.swift; sourceTree = "<group>"; };
+		A001000900000009 /* SigningConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SigningConfig.swift; sourceTree = "<group>"; };
+		A00100010000000A /* SigningService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SigningService.swift; sourceTree = "<group>"; };
+		A00100011000000B /* IPAParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IPAParser.swift; sourceTree = "<group>"; };
+		A00100012000000C /* OTAInstallService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTAInstallService.swift; sourceTree = "<group>"; };
+		A00100013000000D /* RenewalManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenewalManager.swift; sourceTree = "<group>"; };
+		A00100014000000E /* ZsignWrapper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ZsignWrapper.mm; sourceTree = "<group>"; };
+		A00100015000000F /* ZsignWrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ZsignWrapper.h; sourceTree = "<group>"; };
+		A001000160000010 /* FlareSign-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "FlareSign-Bridging-Header.h"; sourceTree = "<group>"; };
+		A001000170000011 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A001000180000012 /* FlareSign.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlareSign.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C001000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D000000000000001 /* FlareSign */ = {
+			isa = PBXGroup;
+			children = (
+				D000000100000002 /* App */,
+				D000000200000003 /* Views */,
+				D000000300000004 /* Models */,
+				D000000400000005 /* Services */,
+				A00100015000000F /* ZsignWrapper.h */,
+				A00100014000000E /* ZsignWrapper.mm */,
+				A001000160000010 /* FlareSign-Bridging-Header.h */,
+				A001000170000011 /* Info.plist */,
+			);
+			path = FlareSign;
+			sourceTree = "<group>";
+		};
+		D000000100000002 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A001000100000001 /* FlareSignApp.swift */,
+				A001000200000002 /* AppState.swift */,
+				A001000300000003 /* ContentView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		D000000200000003 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A001000400000004 /* HomeView.swift */,
+				A001000500000005 /* SigningView.swift */,
+				A001000600000006 /* InstalledAppsView.swift */,
+				A001000700000007 /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		D000000300000004 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A001000800000008 /* SignedApp.swift */,
+				A001000900000009 /* SigningConfig.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		D000000400000005 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A00100010000000A /* SigningService.swift */,
+				A00100011000000B /* IPAParser.swift */,
+				A00100012000000C /* OTAInstallService.swift */,
+				A00100013000000D /* RenewalManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		E000000000000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A001000180000012 /* FlareSign.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E000000000000000 /* root */ = {
+			isa = PBXGroup;
+			children = (
+				D000000000000001 /* FlareSign */,
+				E000000000000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F000000000000001 /* FlareSign */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F100000000000001 /* Build configuration list for PBXNativeTarget "FlareSign" */;
+			buildPhases = (
+				C001000000000001 /* Sources */,
+				C001000100000001 /* Frameworks */,
+				C001000200000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FlareSign;
+			productName = FlareSign;
+			productReference = A001000180000012 /* FlareSign.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F000000000000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1540;
+				LastUpgradeCheck = 1540;
+				TargetAttributes = {
+					F000000000000001 = {
+						CreatedOnToolsVersion = 15.4;
+					};
+				};
+			};
+			buildConfigurationList = F100000000000000 /* Build configuration list for PBXProject "FlareSign" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = E000000000000000;
+			productRefGroup = E000000000000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F000000000000001 /* FlareSign */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C001000200000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		C001000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B001000100000001 /* FlareSignApp.swift in Sources */,
+				B001000200000002 /* AppState.swift in Sources */,
+				B001000300000003 /* ContentView.swift in Sources */,
+				B001000400000004 /* HomeView.swift in Sources */,
+				B001000500000005 /* SigningView.swift in Sources */,
+				B001000600000006 /* InstalledAppsView.swift in Sources */,
+				B001000700000007 /* SettingsView.swift in Sources */,
+				B001000800000008 /* SignedApp.swift in Sources */,
+				B001000900000009 /* SigningConfig.swift in Sources */,
+				B00100010000000A /* SigningService.swift in Sources */,
+				B00100011000000B /* IPAParser.swift in Sources */,
+				B00100012000000C /* OTAInstallService.swift in Sources */,
+				B00100013000000D /* RenewalManager.swift in Sources */,
+				B00100014000000E /* ZsignWrapper.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		F200000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_CYCLE = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		F200000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_CYCLE = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F200000000000003 /* Debug - Target */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FlareSign/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.flaresign.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "FlareSign/FlareSign-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		F200000000000004 /* Release - Target */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = FlareSign/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.flaresign.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "FlareSign/FlareSign-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F100000000000000 /* Build configuration list for PBXProject "FlareSign" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F200000000000001 /* Debug */,
+				F200000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F100000000000001 /* Build configuration list for PBXNativeTarget "FlareSign" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F200000000000003 /* Debug - Target */,
+				F200000000000004 /* Release - Target */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = F000000000000000 /* Project object */;
+}
