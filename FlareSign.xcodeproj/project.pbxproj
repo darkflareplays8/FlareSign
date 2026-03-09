@@ -20,7 +20,7 @@
 		B00100011000000B /* IPAParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00100011000000B /* IPAParser.swift */; };
 		B00100012000000C /* OTAInstallService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00100012000000C /* OTAInstallService.swift */; };
 		B00100013000000D /* RenewalManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00100013000000D /* RenewalManager.swift */; };
-		B00100014000000E /* ZsignWrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = A00100014000000E /* ZsignWrapper.mm */; };
+		B00100015000000F /* AppleAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00100015000000F /* AppleAuthService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,10 +37,8 @@
 		A00100011000000B /* IPAParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IPAParser.swift; sourceTree = "<group>"; };
 		A00100012000000C /* OTAInstallService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTAInstallService.swift; sourceTree = "<group>"; };
 		A00100013000000D /* RenewalManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenewalManager.swift; sourceTree = "<group>"; };
-		A00100014000000E /* ZsignWrapper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ZsignWrapper.mm; sourceTree = "<group>"; };
-		A00100015000000F /* ZsignWrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ZsignWrapper.h; sourceTree = "<group>"; };
-		A001000160000010 /* FlareSign-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "FlareSign-Bridging-Header.h"; sourceTree = "<group>"; };
-		A001000170000011 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A00100015000000F /* AppleAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleAuthService.swift; sourceTree = "<group>"; };
+		A001000170000011 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = SOURCE_ROOT; };
 		A001000180000012 /* FlareSign.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlareSign.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -92,6 +90,7 @@
 				A00100011000000B /* IPAParser.swift */,
 				A00100012000000C /* OTAInstallService.swift */,
 				A00100013000000D /* RenewalManager.swift */,
+				A00100015000000F /* AppleAuthService.swift */,
 			);
 			path = services;
 			sourceTree = "<group>";
@@ -103,9 +102,6 @@
 				D000000200000003 /* views */,
 				D000000300000004 /* models */,
 				D000000400000005 /* services */,
-				A00100015000000F /* ZsignWrapper.h */,
-				A00100014000000E /* ZsignWrapper.mm */,
-				A001000160000010 /* FlareSign-Bridging-Header.h */,
 				A001000170000011 /* Info.plist */,
 			);
 			name = FlareSign;
@@ -208,7 +204,7 @@
 				B00100011000000B /* IPAParser.swift in Sources */,
 				B00100012000000C /* OTAInstallService.swift in Sources */,
 				B00100013000000D /* RenewalManager.swift in Sources */,
-				B00100014000000E /* ZsignWrapper.mm in Sources */,
+				B00100015000000F /* AppleAuthService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -281,7 +277,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.flaresign.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "$(SRCROOT)/FlareSign-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -305,7 +300,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.flaresign.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "$(SRCROOT)/FlareSign-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
