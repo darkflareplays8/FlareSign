@@ -14,13 +14,6 @@ on:
           - Release
           - Debug
 
-env:
-  APP_NAME: FlareSign
-  BUNDLE_ID: com.flaresign.app
-  SCHEME: FlareSign
-  PROJECT: FlareSign.xcodeproj
-  CONFIGURATION: ${{ github.event.inputs.configuration || 'Release' }}
-
 jobs:
   build:
     runs-on: macos-14
@@ -44,19 +37,19 @@ jobs:
       - name: Resolve SPM packages
         run: |
           xcodebuild -resolvePackageDependencies \
-            -project ${{ env.PROJECT }} \
-            -scheme ${{ env.SCHEME }} \
+            -project FlareSign.xcodeproj \
+            -scheme FlareSign \
             -clonedSourcePackagesDirPath SourcePackages
 
       - name: Build unsigned archive
         run: |
           mkdir -p build
           xcodebuild archive \
-            -project ${{ env.PROJECT }} \
-            -scheme ${{ env.SCHEME }} \
-            -configuration ${{ env.CONFIGURATION }} \
+            -project FlareSign.xcodeproj \
+            -scheme FlareSign \
+            -configuration ${{ github.event.inputs.configuration || 'Release' }} \
             -destination "generic/platform=iOS" \
-            -archivePath build/${{ env.APP_NAME }}.xcarchive \
+            -archivePath build/FlareSign.xcarchive \
             -clonedSourcePackagesDirPath SourcePackages \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
@@ -64,24 +57,22 @@ jobs:
             SWIFT_OBJC_BRIDGING_HEADER="FlareSign/FlareSign-Bridging-Header.h" \
             | xcpretty
 
-      - name: Debug archive contents
-        run: find build/${{ env.APP_NAME }}.xcarchive -name "*.app" | head -5
+      - name: List archive contents
+        run: find build/FlareSign.xcarchive -name "*.app"
 
       - name: Package IPA
         run: |
-          APP_PATH=$(find build/${{ env.APP_NAME }}.xcarchive -name "*.app" -maxdepth 4 | head -1)
-          echo "App path: $APP_PATH"
+          APP_PATH=$(find build/FlareSign.xcarchive -name "*.app" | head -1)
+          echo "Found: $APP_PATH"
           mkdir -p build/Payload
           cp -r "$APP_PATH" build/Payload/
-          cd build
-          zip -r ${{ env.APP_NAME }}.ipa Payload/
-          rm -rf Payload/
+          cd build && zip -r FlareSign.ipa Payload/ && rm -rf Payload/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: FlareSign-${{ github.run_number }}
-          path: build/${{ env.APP_NAME }}.ipa
+          path: build/FlareSign.ipa
           retention-days: 30
           if-no-files-found: error
 
@@ -91,7 +82,7 @@ jobs:
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: FlareSign v1.0.${{ github.run_number }}
-          files: build/${{ env.APP_NAME }}.ipa
+          files: build/FlareSign.ipa
           body: "Build ${{ github.run_number }} — ${{ github.event.head_commit.message }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
