@@ -262,7 +262,7 @@ struct SigningView: View {
                                    signedDate: Date(), expiryDate: expiry, iconData: iconData)
                 appState.installedApps.append(app)
                 signingState = .success
-                OTAInstallService.shared.install(ipaURL: signedURL, bundleID: bundleID)
+                OTAInstallService.shared.install(ipaURL: signedURL, bundleID: bundleID, appName: appName, version: version)
             case .failure(let error):
                 signingState = .failed(error.localizedDescription)
             }
