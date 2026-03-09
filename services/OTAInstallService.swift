@@ -5,10 +5,10 @@ class OTAInstallService {
     static let shared = OTAInstallService()
     private var server: LocalHTTPServer?
 
-    func install(ipaURL: URL, bundleID: String) {
+    func install(ipaURL: URL, bundleID: String, appName: String = "App", version: String = "") {
         do {
             let port = 8765
-            server = try LocalHTTPServer(ipaURL: ipaURL, bundleID: bundleID, port: port)
+            server = try LocalHTTPServer(ipaURL: ipaURL, bundleID: bundleID, appName: appName, version: version, port: port)
             let manifestURL = "http://127.0.0.1:\(port)/manifest.plist"
             let installURL = "itms-services://?action=download-manifest&url=\(manifestURL)"
             guard let url = URL(string: installURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? installURL) else { return }
@@ -26,11 +26,15 @@ class LocalHTTPServer {
     private var serverSocket: Int32 = -1
     private let ipaURL: URL
     private let bundleID: String
+    private let appName: String
+    private let version: String
     private let port: Int
 
-    init(ipaURL: URL, bundleID: String, port: Int) throws {
+    init(ipaURL: URL, bundleID: String, appName: String, version: String, port: Int) throws {
         self.ipaURL = ipaURL
         self.bundleID = bundleID
+        self.appName = appName
+        self.version = version
         self.port = port
 
         serverSocket = socket(AF_INET, SOCK_STREAM, 0)
@@ -98,6 +102,10 @@ class LocalHTTPServer {
 
     private func buildManifest() -> Data {
         let ipaSize = (try? ipaURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        let bundleVersion = version.isEmpty
+            ? (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
+            : version
+        let displayName = appName.isEmpty ? "App" : appName
         let xml = """
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -117,9 +125,9 @@ class LocalHTTPServer {
                     <key>metadata</key>
                     <dict>
                         <key>bundle-identifier</key><string>\(bundleID)</string>
-                        <key>bundle-version</key><string>1.0</string>
+                        <key>bundle-version</key><string>\(bundleVersion)</string>
                         <key>kind</key><string>software</string>
-                        <key>title</key><string>App</string>
+                        <key>title</key><string>\(displayName)</string>
                     </dict>
                 </dict>
             </array>
