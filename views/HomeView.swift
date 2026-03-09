@@ -84,11 +84,14 @@ struct HomeView: View {
             }
             .navigationBarHidden(true)
         }
+        }
         .fileImporter(isPresented: $showingFilePicker,
                       allowedContentTypes: [UTType(filenameExtension: "ipa") ?? .data],
                       allowsMultipleSelection: false) { result in
-            if case .success(let urls) = result, let url = urls.first {
-                _ = url.startAccessingSecurityScopedResource()
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                guard url.startAccessingSecurityScopedResource() else { return }
                 selectedIPAURL = url
                 IPAParser.parse(url: url) { info in
                     DispatchQueue.main.async {
@@ -96,8 +99,11 @@ struct HomeView: View {
                         detectedBundleID = info.bundleID
                         detectedVersion = info.version
                         detectedIconData = info.iconData
+                        url.stopAccessingSecurityScopedResource()
                     }
                 }
+            case .failure(let error):
+                print("File picker error: \(error.localizedDescription)")
             }
         }
         .sheet(isPresented: $showingSigningSheet) {
