@@ -21,6 +21,7 @@
 		B00100012000000C /* OTAInstallService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00100012000000C /* OTAInstallService.swift */; };
 		B00100013000000D /* RenewalManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00100013000000D /* RenewalManager.swift */; };
 		B00100015000000F /* AppleAuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00100015000000F /* AppleAuthService.swift */; };
+		B001000160000010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A001000160000010 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +40,7 @@
 		A00100013000000D /* RenewalManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenewalManager.swift; sourceTree = "<group>"; };
 		A00100015000000F /* AppleAuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleAuthService.swift; sourceTree = "<group>"; };
 		A001000170000011 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = SOURCE_ROOT; };
+		A001000160000010 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = SOURCE_ROOT; };
 		A001000180000012 /* FlareSign.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FlareSign.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -103,6 +105,7 @@
 				D000000300000004 /* models */,
 				D000000400000005 /* services */,
 				A001000170000011 /* Info.plist */,
+				A001000160000010 /* Assets.xcassets */,
 			);
 			name = FlareSign;
 			sourceTree = SOURCE_ROOT;
@@ -181,6 +184,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B001000160000010 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -265,6 +269,7 @@
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGNING_REQUIRED = NO;
 				CODE_SIGNING_ALLOWED = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
@@ -288,6 +293,7 @@
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGNING_REQUIRED = NO;
 				CODE_SIGNING_ALLOWED = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Info.plist;
