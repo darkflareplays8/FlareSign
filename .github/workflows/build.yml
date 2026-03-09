@@ -48,30 +48,7 @@ jobs:
             -scheme ${{ env.SCHEME }} \
             -clonedSourcePackagesDirPath SourcePackages
 
-      - name: Import signing certificate
-        env:
-          P12_DATA: ${{ secrets.SIGNING_CERTIFICATE_P12_DATA }}
-          P12_PASSWORD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          KEYCHAIN=$RUNNER_TEMP/build.keychain
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN
-          security set-keychain-settings -lut 21600 $KEYCHAIN
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN
-          echo "$P12_DATA" | base64 --decode -o $RUNNER_TEMP/cert.p12
-          security import $RUNNER_TEMP/cert.p12 -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN
-          security list-keychain -d user -s $KEYCHAIN
-
-      - name: Import provisioning profile
-        env:
-          PROFILE_DATA: ${{ secrets.PROVISIONING_PROFILE_DATA }}
-        run: |
-          echo "$PROFILE_DATA" | base64 --decode -o $RUNNER_TEMP/profile.mobileprovision
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          UUID=$(security cms -D -i $RUNNER_TEMP/profile.mobileprovision | plutil -extract UUID xml1 -o - - | sed -n 's/.*<string>\(.*\)<\/string>.*/\1/p')
-          cp $RUNNER_TEMP/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
-
-      - name: Build archive
+      - name: Build unsigned IPA
         run: |
           mkdir -p build
           xcodebuild archive \
@@ -81,32 +58,26 @@ jobs:
             -destination "generic/platform=iOS" \
             -archivePath build/${{ env.APP_NAME }}.xcarchive \
             -clonedSourcePackagesDirPath SourcePackages \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} \
-            CODE_SIGN_IDENTITY="iPhone Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="${{ env.APP_NAME }}" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
             SWIFT_OBJC_BRIDGING_HEADER="FlareSign/FlareSign-Bridging-Header.h" \
             | xcpretty
 
-      - name: Export IPA
+      - name: Package IPA
         run: |
-          xcodebuild -exportArchive \
-            -archivePath build/${{ env.APP_NAME }}.xcarchive \
-            -exportPath build/ipa \
-            -exportOptionsPlist .github/ExportOptions.plist \
-            | xcpretty
+          mkdir -p build/ipa/Payload
+          cp -r build/${{ env.APP_NAME }}.xcarchive/Products/Applications/${{ env.APP_NAME }}.app build/ipa/Payload/
+          cd build/ipa
+          zip -r ../${{ env.APP_NAME }}.ipa Payload/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: FlareSign-${{ github.run_number }}
-          path: build/ipa/${{ env.APP_NAME }}.ipa
+          path: build/${{ env.APP_NAME }}.ipa
           retention-days: 30
           if-no-files-found: error
-
-      - name: Clean up keychain
-        if: always()
-        run: security delete-keychain $RUNNER_TEMP/build.keychain || true
 
       - name: Create Release
         if: github.ref == 'refs/heads/main'
@@ -114,7 +85,7 @@ jobs:
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: FlareSign v1.0.${{ github.run_number }}
-          files: build/ipa/${{ env.APP_NAME }}.ipa
+          files: build/${{ env.APP_NAME }}.ipa
           body: "Build ${{ github.run_number }} — ${{ github.event.head_commit.message }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
