@@ -1,0 +1,3 @@
+[submodule "zsign"]
+	path = zsign
+	url = https://github.com/zhlynn/zsign
