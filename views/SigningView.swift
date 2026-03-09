@@ -56,6 +56,15 @@ struct SigningView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             }
+            .onAppear {
+                // Pre-fill from saved default credentials
+                if config.appleID.isEmpty {
+                    config.appleID = appState.signingConfig.appleID
+                }
+                if config.password.isEmpty {
+                    config.password = appState.signingConfig.password
+                }
+            }
             .sheet(isPresented: $showingTwoFactor) { twoFactorSheet }
         }
     }
