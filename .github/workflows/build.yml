@@ -21,11 +21,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Select Xcode 15.4
         run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+
+      - name: Download ldid (iOS ARM64)
+        run: |
+          curl -L -o ldid https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_iphoneos_arm64
+          chmod +x ldid
+          # Place in a Resources folder so Bundle.main.path(forResource:) finds it
+          mkdir -p resources
+          mv ldid resources/ldid
 
       - name: Cache DerivedData
         uses: actions/cache@v4
@@ -33,13 +39,6 @@ jobs:
           path: ~/Library/Developer/Xcode/DerivedData
           key: ${{ runner.os }}-deriveddata-${{ hashFiles('**/*.xcodeproj/project.pbxproj') }}
           restore-keys: ${{ runner.os }}-deriveddata-
-
-      - name: Resolve SPM packages
-        run: |
-          xcodebuild -resolvePackageDependencies \
-            -project FlareSign.xcodeproj \
-            -scheme FlareSign \
-            -clonedSourcePackagesDirPath SourcePackages
 
       - name: Build unsigned archive
         run: |
@@ -50,14 +49,15 @@ jobs:
             -configuration ${{ github.event.inputs.configuration || 'Release' }} \
             -destination "generic/platform=iOS" \
             -archivePath build/FlareSign.xcarchive \
-            -clonedSourcePackagesDirPath SourcePackages \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             | xcpretty
 
-      - name: List archive contents
-        run: find build/FlareSign.xcarchive -name "*.app"
+      - name: Inject ldid into app bundle
+        run: |
+          APP_PATH=$(find build/FlareSign.xcarchive -name "*.app" | head -1)
+          cp resources/ldid "$APP_PATH/ldid"
 
       - name: Package IPA
         run: |
