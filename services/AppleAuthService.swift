@@ -63,6 +63,15 @@ class AppleAuthService {
                         progress("Auth failed: \(e.localizedDescription)")
                         completion(.failure(e))
                     case .success(let (adsid, token)):
+                        // If this is the idmsToken returned after 2FA, we need one more GSA
+                        // auth pass to exchange it for a real mmeToken (Apple now trusts the device)
+                        if token == adsid || token.hasPrefix("Bearer") {
+                            progress("2FA accepted — re-authenticating...")
+                            self.authenticate(appleID: appleID, password: password, bundleID: bundleID,
+                                              twoFactorHandler: { _, cont in cont("") }, // won't be triggered again
+                                              progress: progress, completion: completion)
+                            return
+                        }
                         progress("Auth OK — fetching certificate...")
                         self.fetchCertificateAndProvision(adsid: adsid, token: token,
                                                           bundleID: bundleID, anisette: anisette,
@@ -242,12 +251,16 @@ class AppleAuthService {
                 completion(.failure(AppleAuthError.authFailed("Invalid complete response"))); return
             }
             let ec = (resp["Status"] as? [String: Any])?["ec"] as? Int ?? -1
+            // ec -22421 = trusted device 2FA required, -22406 = SMS/phone 2FA required
             if ec == -22421 || ec == -22406 {
                 let adsid = resp["adsid"] as? String ?? ""
                 let idmsToken = resp["idms_token"] as? String ?? ""
-                twoFactorHandler(appleID) { code in
-                    self.submitTwoFactor(code: code, adsid: adsid, idmsToken: idmsToken,
-                                         anisette: anisette, completion: completion)
+                // Must call idmsa FIRST to actually dispatch the code to the user's device
+                self.requestIdmsaCode(adsid: adsid, idmsToken: idmsToken, anisette: anisette) { _ in
+                    twoFactorHandler(appleID) { code in
+                        self.submitTwoFactor(code: code, adsid: adsid, idmsToken: idmsToken,
+                                             anisette: anisette, completion: completion)
+                    }
                 }
                 return
             }
@@ -265,30 +278,60 @@ class AppleAuthService {
         }.resume()
     }
 
+    // Calls idmsa.apple.com to actually SEND the 2FA code to the user's trusted device / phone.
+    // Without this, Apple never dispatches the code — the UI prompt appears but nothing arrives.
+    private func requestIdmsaCode(adsid: String, idmsToken: String, anisette: AnisetteData,
+                                   completion: @escaping (Bool) -> Void) {
+        guard let url = URL(string: "https://idmsa.apple.com/appleauth/auth/verify/trusteddevice") else {
+            completion(false); return
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(idmsToken)", forHTTPHeaderField: "Authorization")
+        req.setValue(adsid, forHTTPHeaderField: "X-Apple-DS-ID")
+        req.setValue("17", forHTTPHeaderField: "X-Apple-OAuth-Client-Id")
+        req.setValue("d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d",
+                     forHTTPHeaderField: "X-Apple-Widget-Key")
+        req.timeoutInterval = 15
+        URLSession.shared.dataTask(with: req) { _, _, _ in
+            // We don't care about the response — the side effect is Apple sending the code
+            completion(true)
+        }.resume()
+    }
+
+    // Submits the 6-digit code the user received to idmsa.apple.com to verify it.
     private func submitTwoFactor(
         code: String, adsid: String, idmsToken: String, anisette: AnisetteData,
         completion: @escaping (Result<(String, String), Error>) -> Void
     ) {
-        guard let url = URL(string: "https://gsa.apple.com/grandslam/GsService2/validate") else { return }
+        guard let url = URL(string: "https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode") else { return }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.setValue("application/x-apple-plist", forHTTPHeaderField: "Content-Type")
-        applyAnisetteHeaders(anisette, to: &req)
-        req.setValue(idmsToken, forHTTPHeaderField: "X-Apple-IDMS-Token")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+        req.setValue("Bearer \(idmsToken)", forHTTPHeaderField: "Authorization")
         req.setValue(adsid, forHTTPHeaderField: "X-Apple-DS-ID")
-        let body: [String: Any] = ["code": code, "cpd": anisetteDict(anisette)]
-        req.httpBody = try? PropertyListSerialization.data(fromPropertyList: body, format: .xml, options: 0)
+        req.setValue("17", forHTTPHeaderField: "X-Apple-OAuth-Client-Id")
+        req.setValue("d39ba9916b7251055b22c7f910e2ea796ee65e98b2ddecea8f5dde8d9d1a815d",
+                     forHTTPHeaderField: "X-Apple-Widget-Key")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: [
+            "securityCode": ["code": code]
+        ])
+        req.timeoutInterval = 20
 
-        URLSession.shared.dataTask(with: req) { data, _, error in
+        URLSession.shared.dataTask(with: req) { [weak self] data, response, error in
+            guard let self else { return }
             if let error { completion(.failure(error)); return }
-            guard let data,
-                  let resp = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
-                  let tDict = resp["t"] as? [String: Any],
-                  let first = tDict.values.first as? [String: Any],
-                  let token = first["token"] as? String else {
-                completion(.failure(AppleAuthError.authFailed("2FA failed"))); return
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            // 204 = success
+            if status == 204 || status == 200 {
+                completion(.success((adsid, idmsToken)))
+            } else {
+                let body = data.flatMap { String(data: $0, encoding: .utf8) } ?? "HTTP \(status)"
+                completion(.failure(AppleAuthError.authFailed("2FA verify failed: \(body.prefix(200))")))
             }
-            completion(.success((adsid, token)))
         }.resume()
     }
 
