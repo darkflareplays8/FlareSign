@@ -76,21 +76,19 @@ class AppleAuthService {
 
     func fetchAnisetteData(progress: @escaping (String) -> Void = { _ in },
                             completion: @escaping (Result<AnisetteData, Error>) -> Void) {
-        // All known public v3 anisette servers — tried in order, first working one wins.
-        // NOTE: Sideloadly's server is intentionally excluded — it's a v1 server
-        // that is known to lock Apple IDs when shared by many users.
+        // Correct endpoint is root path — no /v3 suffix
         let servers = [
-            "https://ani.sidestore.io/v3",
-            "https://ani.sidestore.app/v3",
-            "https://ani.sidestore.zip/v3",
-            "https://ani.846969.xyz/v3",
-            "https://ani.npeg.us/v3",
-            "https://anisette.wedotstud.io/v3",
-            "https://ani.xu30.top/v3",
-            "https://ani.owoellen.rocks/v3",
-            "https://ani.wesbryie.com/v3",
-            "http://5.249.163.88:6969/v3",
-            "https://ani.altstore.io/v3",
+            "https://ani.sidestore.io",
+            "https://ani.sidestore.app",
+            "https://ani.sidestore.zip",
+            "https://ani.846969.xyz",
+            "https://ani.npeg.us",
+            "https://anisette.wedotstud.io",
+            "https://ani.xu30.top",
+            "https://ani.owoellen.rocks",
+            "https://ani.wesbryie.com",
+            "http://5.249.163.88:6969",
+            "https://ani.altstore.io",
         ]
         tryAnisetteServers(servers, index: 0, progress: progress, completion: completion)
     }
