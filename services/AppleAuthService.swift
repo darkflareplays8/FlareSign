@@ -146,11 +146,13 @@ class AppleAuthService {
         twoFactorHandler: @escaping (String, @escaping (String) -> Void) -> Void,
         completion: @escaping (Result<(String, String), Error>) -> Void
     ) {
-        guard let url = URL(string: "https://gsa.apple.com/grandslam/GsService2/lookup") else { return }
+        guard let url = URL(string: "https://gsa.apple.com/grandslam/GsService2") else { return }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.setValue("application/x-apple-plist", forHTTPHeaderField: "Content-Type")
-        req.setValue("application/x-apple-plist", forHTTPHeaderField: "Accept")
+        req.setValue("text/x-xml-plist", forHTTPHeaderField: "Content-Type")
+        req.setValue("*/*", forHTTPHeaderField: "Accept")
+        req.setValue("akd/1.0 CFNetwork/978.0.7 Darwin/18.7.0", forHTTPHeaderField: "User-Agent")
+        req.setValue("en-us", forHTTPHeaderField: "Accept-Language")
         applyAnisetteHeaders(anisette, to: &req)
 
         var srpA = [UInt8](repeating: 0, count: 256)
@@ -158,12 +160,16 @@ class AppleAuthService {
         srpA[0] |= 0x80
         let srpAData = Data(srpA)
 
+        // Request must be wrapped in Header/Request envelope
         let initBody: [String: Any] = [
-            "A2k": srpAData,
-            "cpd": anisetteDict(anisette),
-            "o": "init",
-            "ps": ["s2k", "s2k_fo"],
-            "u": appleID
+            "Header": ["Version": "1.0.1"],
+            "Request": [
+                "A2k": srpAData,
+                "cpd": anisetteDict(anisette),
+                "o": "init",
+                "ps": ["s2k", "s2k_fo"],
+                "u": appleID
+            ]
         ]
         req.httpBody = try? PropertyListSerialization.data(fromPropertyList: initBody, format: .xml, options: 0)
 
@@ -171,8 +177,10 @@ class AppleAuthService {
             guard let self else { return }
             if let error { completion(.failure(error)); return }
             guard let data,
-                  let resp = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else {
-                completion(.failure(AppleAuthError.authFailed("Invalid init response"))); return
+                  let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+                  let resp = plist["Response"] as? [String: Any] else {
+                let raw = data.flatMap { String(data: $0, encoding: .utf8) } ?? "no data"
+                completion(.failure(AppleAuthError.authFailed("Invalid init response: \(raw.prefix(200))"))); return
             }
             if let ec = (resp["Status"] as? [String: Any])?["ec"] as? Int, ec != 0 {
                 let msg = (resp["Status"] as? [String: Any])?["em"] as? String ?? "Error \(ec)"
@@ -182,7 +190,7 @@ class AppleAuthService {
                   let serverB = resp["B"] as? Data,
                   let iterations = resp["i"] as? Int,
                   let sessionKey = resp["c"] as? String else {
-                completion(.failure(AppleAuthError.authFailed("Missing SRP params"))); return
+                completion(.failure(AppleAuthError.authFailed("Missing SRP params: \(resp.keys.joined(separator: ","))"))); return
             }
             self.completeSRP(appleID: appleID, password: password, salt: salt,
                              serverB: serverB, iterations: iterations, sessionKey: sessionKey,
@@ -197,14 +205,15 @@ class AppleAuthService {
         twoFactorHandler: @escaping (String, @escaping (String) -> Void) -> Void,
         completion: @escaping (Result<(String, String), Error>) -> Void
     ) {
-        guard let url = URL(string: "https://gsa.apple.com/grandslam/GsService2/complete") else { return }
+        guard let url = URL(string: "https://gsa.apple.com/grandslam/GsService2") else { return }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.setValue("application/x-apple-plist", forHTTPHeaderField: "Content-Type")
-        req.setValue("application/x-apple-plist", forHTTPHeaderField: "Accept")
+        req.setValue("text/x-xml-plist", forHTTPHeaderField: "Content-Type")
+        req.setValue("*/*", forHTTPHeaderField: "Accept")
+        req.setValue("akd/1.0 CFNetwork/978.0.7 Darwin/18.7.0", forHTTPHeaderField: "User-Agent")
+        req.setValue("en-us", forHTTPHeaderField: "Accept-Language")
         applyAnisetteHeaders(anisette, to: &req)
 
-        // PBKDF2 using CryptoKit-compatible approach
         let passwordKey = pbkdf2SHA256(password: password, salt: salt, iterations: iterations)
         var combined = Data()
         combined.append(passwordKey)
@@ -213,11 +222,14 @@ class AppleAuthService {
         let M1 = Data(SHA256.hash(data: combined))
 
         let completeBody: [String: Any] = [
-            "M1": M1,
-            "c": sessionKey,
-            "cpd": anisetteDict(anisette),
-            "o": "complete",
-            "u": appleID
+            "Header": ["Version": "1.0.1"],
+            "Request": [
+                "M1": M1,
+                "c": sessionKey,
+                "cpd": anisetteDict(anisette),
+                "o": "complete",
+                "u": appleID
+            ]
         ]
         req.httpBody = try? PropertyListSerialization.data(fromPropertyList: completeBody, format: .xml, options: 0)
 
@@ -225,7 +237,8 @@ class AppleAuthService {
             guard let self else { return }
             if let error { completion(.failure(error)); return }
             guard let data,
-                  let resp = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any] else {
+                  let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+                  let resp = plist["Response"] as? [String: Any] else {
                 completion(.failure(AppleAuthError.authFailed("Invalid complete response"))); return
             }
             let ec = (resp["Status"] as? [String: Any])?["ec"] as? Int ?? -1
